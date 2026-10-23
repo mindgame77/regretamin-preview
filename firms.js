@@ -1,1 +1,0 @@
-window.REGRET_FIRMS={"a16z": "a16z", "andreessen horowitz": "a16z"};document.addEventListener("DOMContentLoaded",()=>document.body.insertAdjacentHTML("beforeend","<datalist id=\"firms\"><option value=\"Andreessen Horowitz\"></datalist>"))
