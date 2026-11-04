@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /_tpl/
+
+Sitemap: https://regretamin.com/sitemap.xml
