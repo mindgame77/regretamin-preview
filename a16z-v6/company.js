@@ -1054,7 +1054,7 @@
   const AC = COPY.activity || {};
   const money = (v) => { const n = Number(v); if (!isFinite(n) || n <= 0) return '';
     const u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']].find(x => n >= x[0]);
-    return u ? '$' + String(+(n / u[0]).toFixed(n / u[0] >= 100 ? 0 : 2)) + u[1] : '$' + n; };
+    return u ? '$' + String(+(n / u[0]).toFixed(n / u[0] >= 100 ? 0 : 1)) + u[1] : '$' + n; };
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   // B6c.1/B6c.8/A1.8: a fund link names its real source. sec.gov is a Filing; else the stored outlet or trusted page name; else the host.
   const srcName = (u, label) => { const h = hostOf(u); if (/(^|\.)sec\.gov$/i.test(h)) return AC.filing || 'Filing';
@@ -1266,21 +1266,22 @@
     // A fund with an amount raised stays the Latest fund tile. On the 10 lab firms, a $0 or missing
     // amount is skipped for the next fund that raised money, then for assets under management.
     // Every other firm keeps the previous tile. The script is shared, so the limit is the slug.
-    const raised = f && (f.raised_display || money(f.raised_usd));
+    // F7.8 / M1.8 / M1.8.3 (Alex 2026-11-03): one money tile, the first that exists: latest fund (newest close date
+    // with an amount raised), else AUM (grey), else news AUM "Reported by news" (grey), else none. Never "No SEC filings".
+    const raised = f && money(f.raised_usd);
+    const lnk = (u, name) => u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener"' + fullA(name) + '>' + esc(capL(name)) + ' ↗</a>' : '';
+    const mdy = (d) => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + '/' + m[3] + '/' + m[1] : ''; };
     if (raised) {
-      const u = safeUrl(f.url);
-      const sub = esc(fundName(f.name)) + ' · ' + esc(fmt(AC.raised, { amount: raised })) + (u ? ' · <a href="' + esc(u) + '" target="_blank" rel="noopener"' + fullA(srcName(u, f.url_label)) + '>' + esc(capL(srcName(u, f.url_label))) + ' ↗</a>' : '');
-      tiles.push(tile(AC.fund, esc(raised), sub, 'afd'));
-    } else if (labFirm(P)) {
-      const prev = earlierFund(P);
-      if (prev) tiles.push(raisedFundTile(prev));
-    } else if (f) {
-      const u = safeUrl(f.url);
-      const sub = esc(fundName(f.name)) + (u ? ' · <a href="' + esc(u) + '" target="_blank" rel="noopener"' + fullA(srcName(u, f.url_label)) + '>' + esc(capL(srcName(u, f.url_label))) + ' ↗</a>' : '');
-      tiles.push(tile(AC.fund, '<span class="asm">' + esc(fundName(f.name)) + '</span>', sub, 'afd'));
+      const u = safeUrl(f.url), yr = (String(f.date || '').match(/^\d{4}/) || [''])[0];
+      const old = !f.date || (Date.now() - new Date(f.date).getTime()) >= 3 * 365.25 * 864e5;
+      const sub = [esc(fundName(f.name)), yr, lnk(u, srcName(u, f.url_label))].filter(Boolean).join(' · ');
+      tiles.push(tile(AC.fund, esc(raised), sub, 'afd ' + (old ? 'fr' : 'fg')));
+    } else {
+      const M = (P.firm && P.firm.money) || {}, am = M.aum, an = M.aum_news;
+      const au = am && am.display && aumUrl(am.url, P.firm && P.firm.website), nu = an && an.display && safeUrl(an.url);
+      if (au) tiles.push(tile('AUM', esc(am.display), [esc(am.source_label || 'SEC Form ADV'), mdy(am.date), lnk(au, srcName(au))].filter(Boolean).join(' · '), 'afd fx'));
+      else if (nu) tiles.push(tile('AUM', esc(an.display), ['Reported by news', mdy(an.date), lnk(nu, srcName(nu, an.url_label))].filter(Boolean).join(' · '), 'afd fx'));
     }
-    // B6d.6 (lab firms): after the fund tile, AUM, then Fund assets. Each only when stored with its Form ADV link.
-    if (labFirm(P)) [aumTile(P), fundAssetsTile(P)].forEach(t => { if (t) tiles.push(t); });
     // A9.6: "N funds on SEC record · Show all" inside the fund tile. Show all opens the same popup as Show all deals.
     const fs = A.funds_sec, fsn = fs && Number(fs.n) > 0 ? Number(fs.n) : 0;
     const ti = tiles.findIndex(t => t.indexOf('att afd') > -1);
