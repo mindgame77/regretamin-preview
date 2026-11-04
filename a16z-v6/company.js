@@ -828,7 +828,7 @@
   function pageSecs(P) {
     const byKey = Object.fromEntries((P.sections || []).map(s => [s.key, s]));
     const newsItems = buildNews((byKey.press && byKey.press.items) || [], (byKey.timeline && byKey.timeline.items) || [], P && P.firm);
-    return CFG.sections.list.filter(c => c.key !== 'checks' && (c.key === 'news' ? newsItems.length : byKey[c.key])).map(c => {
+    return CFG.sections.list.filter(c => c.key !== 'checks' && c.key !== 'funds' && (c.key === 'news' ? newsItems.length : byKey[c.key])).map(c => {
       if (c.key === 'news') return Object.assign({}, c, { count: newsItems.length, items: newsItems, teaser: (newsItems[0] && newsItems[0].head) || '' });
       const s = Object.assign({}, byKey[c.key], c);
       if (s.key === 'lps') { const n = new Set((s.items || []).map(x => x.label)).size; if (n) s.count = n; }
